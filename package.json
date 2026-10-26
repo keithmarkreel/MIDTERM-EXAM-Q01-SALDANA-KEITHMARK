@@ -1,0 +1,13 @@
+{
+  "name": "saldana-keith-restock-inventory-api",
+  "version": "1.0.0",
+  "description": "Simple Movie Collection REST API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

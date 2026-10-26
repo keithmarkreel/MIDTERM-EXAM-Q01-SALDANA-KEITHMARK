@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Inventory</title>
+</head>
+<body>
+  <main>
+    <h1>Product Inventory</h1>
+
+    <h2>Add Product</h2>
+    <form id="product-form">
+      <label>Product name <input name="product_name" required></label>
+      <label>Category <input name="category" required></label>
+      <label>Price <input name="price" type="number" min="0" step="0.01" required></label>
+      <label>Stock <input name="stock" type="number" min="0" step="1" required></label>
+      <button type="submit">Add Product</button>
+    </form>
+    <p id="message" role="status"></p>
+
+    <h2>Products</h2>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody id="product-list"></tbody>
+    </table>
+  </main>
+
+  <script>
+    const form = document.querySelector('#product-form');
+    const productList = document.querySelector('#product-list');
+    const message = document.querySelector('#message');
+
+    async function loadProducts() {
+      const response = await fetch('/api/products');
+      const products = await response.json();
+      productList.replaceChildren();
+
+      for (const product of products) {
+        const row = document.createElement('tr');
+
+        const values = [
+          product.id,
+          product.product_name,
+          product.category,
+          product.price,
+          product.stock,
+          product.stock_status
+        ];
+
+        for (const value of values) {
+          const cell = document.createElement('td');
+          cell.textContent = value;
+          row.append(cell);
+        }
+
+        const actionCell = document.createElement('td');
+        const deleteButton = document.createElement('button');
+        deleteButton.type = 'button';
+        deleteButton.className = 'delete';
+        deleteButton.textContent = 'Delete';
+        deleteButton.dataset.id = product.id;
+        actionCell.append(deleteButton);
+        row.append(actionCell);
+        productList.append(row);
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      message.className = '';
+
+      const product = {
+        product_name: form.elements.product_name.value,
+        category: form.elements.category.value,
+        price: Number(form.elements.price.value),
+        stock: Number(form.elements.stock.value)
+      };
+
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product)
+      });
+      const result = await response.json();
+
+      if (!response.ok) {
+        message.textContent = result.error;
+        message.className = 'error';
+        return;
+      }
+
+      message.textContent = 'Product added';
+      form.reset();
+      await loadProducts();
+    });
+
+    productList.addEventListener('click', async (event) => {
+      if (event.target.className !== 'delete') return;
+
+      const productId = event.target.dataset.id;
+      const response = await fetch(`/api/products/${productId}`, { method: 'DELETE' });
+      const result = await response.json();
+
+      message.textContent = result.message || result.error;
+      message.className = response.ok ? '' : 'error';
+
+      if (response.ok) await loadProducts();
+    });
+
+    loadProducts().catch(() => {
+      message.textContent = 'Product not Loaded';
+      message.className = 'error';
+    });
+  </script>
+</body>
+</html>
