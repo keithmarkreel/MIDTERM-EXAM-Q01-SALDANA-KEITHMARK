@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 
 const app = express();
@@ -12,6 +13,40 @@ const products = [
 let nextProductId = 4;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.get('/', (req, res) => {
+  let rows = '';
+  for (const product of products) {
+    const name = String(product.product_name).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    const category = String(product.category).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    const status = product.stock === 0 ? 'OUT OF STOCK' : product.stock <= 5 ? 'LOW STOCK' : 'AVAILABLE';
+    rows += `<tr><td>${product.id}</td><td>${name}</td><td>${category}</td><td>${product.price}</td><td>${product.stock}</td><td>${status}</td><td><form action="/products/${product.id}/delete" method="post"><button>Delete</button></form></td></tr>`;
+  }
+
+  const message = req.query.message === 'added' ? 'Product added' : req.query.message === 'deleted' ? 'Product deleted' : '';
+  const page = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+  res.send(page.replace('{{products}}', rows).replace('{{message}}', message));
+});
+
+app.post('/products', (req, res) => {
+  const { product_name, category, price, stock } = req.body;
+  products.push({
+    id: nextProductId++,
+    product_name: product_name.trim(),
+    category: category.trim(),
+    price: Number(price),
+    stock: Number(stock)
+  });
+  res.redirect('/?message=added');
+});
+
+app.post('/products/:id/delete', (req, res) => {
+  const index = products.findIndex((product) => product.id === Number(req.params.id));
+  if (index !== -1) products.splice(index, 1);
+  res.redirect('/?message=deleted');
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/api/products', (req, res) => {
